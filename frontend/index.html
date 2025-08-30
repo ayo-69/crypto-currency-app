@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Crypto Tracker</title>
+        <!-- Use Inter font from Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            body {
+                font-family: "Inter", sans-serif;
+                display: flex;
+                flex-direction: column;
+            }
+            .container {
+                max-width: 900px;
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body
+        class="bg-gray-900 text-gray-200 min-h-screen flex items-center justify-center p-4"
+    >
+        <div
+            class="container bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700"
+        >
+            <div class="flex flex-col items-center text-center mb-8">
+                <h1
+                    class="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2"
+                >
+                    Crypto Tracker
+                </h1>
+                <p class="text-gray-400">
+                    Track multiple cryptocurrencies in multiple currencies.
+                </p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <input
+                    type="text"
+                    id="cryptoInput"
+                    placeholder="Enter crypto symbols (e.g., bitcoin,solana)"
+                    class="flex-1 p-3 bg-gray-700 text-gray-200 rounded-xl border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors placeholder-gray-500"
+                />
+                <input
+                    type="text"
+                    id="currencyInput"
+                    placeholder="Enter currencies (e.g., usd,ngn)"
+                    class="flex-1 p-3 bg-gray-700 text-gray-200 rounded-xl border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors placeholder-gray-500"
+                />
+                <button
+                    id="fetchBtn"
+                    class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transform transition-transform duration-200 hover:scale-105 active:scale-95"
+                >
+                    Get Prices
+                </button>
+            </div>
+
+            <div
+                id="resultContainer"
+                class="hidden bg-gray-700 p-6 rounded-xl transition-all duration-300 transform scale-95 opacity-0"
+            >
+                <!-- Price cards will be dynamically inserted here -->
+            </div>
+
+            <!-- Message/Loading area -->
+            <div
+                id="messageBox"
+                class="text-center p-4 text-sm mt-4 hidden"
+            ></div>
+        </div>
+
+        <footer class="bg-gray-900 text-gray-400 py-6 text-center">
+            <p class="text-sm">
+                © 2025 Isaac Hayab. X - rekt (@isaac_hayab). All rights
+                reserved.
+            </p>
+        </footer>
+
+        <script>
+            // Use a function to safely get the element and handle potential nulls
+            const getElement = (id) => document.getElementById(id);
+
+            // Get references to all relevant HTML elements
+            const cryptoInput = getElement("cryptoInput");
+            const currencyInput = getElement("currencyInput");
+            const fetchBtn = getElement("fetchBtn");
+            const resultContainer = getElement("resultContainer");
+            const messageBox = getElement("messageBox");
+
+            // Function to show a message to the user (instead of alert)
+            function showMessage(text, type = "info") {
+                if (!messageBox) return;
+                messageBox.textContent = text;
+                messageBox.className = `text-center p-4 rounded-xl mt-4 ${
+                    type === "error"
+                        ? "bg-red-500/20 text-red-300"
+                        : type === "info"
+                          ? "bg-blue-500/20 text-blue-300"
+                          : "bg-yellow-500/20 text-yellow-300"
+                }`;
+                messageBox.classList.remove("hidden");
+            }
+
+            // Function to hide the message box
+            function hideMessage() {
+                if (messageBox) {
+                    messageBox.classList.add("hidden");
+                }
+            }
+
+            // Helper function to format a number as currency
+            const formatCurrency = (number, currency = "usd") => {
+                return new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: currency.toUpperCase(),
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 8,
+                }).format(number);
+            };
+
+            // Main function to fetch crypto data
+            async function fetchCryptoData(cryptoSymbols, currencySymbols) {
+                hideMessage();
+                resultContainer.classList.add(
+                    "hidden",
+                    "scale-95",
+                    "opacity-0",
+                );
+                resultContainer.innerHTML = ""; // Clear previous results
+
+                showMessage("Fetching data...", "info");
+
+                // Using your specified API endpoint
+                const apiUrl = `https://crypto-currency-app-d6b1.onrender.com/price?symbols=${cryptoSymbols}&currencies=${currencySymbols}`;
+
+                try {
+                    const response = await fetch(apiUrl);
+
+                    // Handle non-successful responses and log the error
+                    if (!response.ok) {
+                        console.error(
+                            "API Error:",
+                            response.status,
+                            response.statusText,
+                        );
+                        showMessage(
+                            "An error occurred with the API call.",
+                            "error",
+                        );
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    // Assuming the API returns a structure as specified
+                    const prices = data.prices;
+                    const cached = data.cached;
+
+                    if (Object.keys(prices).length === 0) {
+                        console.error(
+                            "No price data available for the provided symbols or currencies.",
+                        );
+                        showMessage(
+                            "No price data available for the provided symbols or currencies.",
+                            "error",
+                        );
+                        return;
+                    }
+
+                    // Create and populate the price cards
+                    let htmlContent = "";
+                    for (const cryptoId in prices) {
+                        const priceData = prices[cryptoId];
+                        let priceListHtml = "";
+                        for (const currency in priceData) {
+                            const price = priceData[currency];
+                            priceListHtml += `<p class="text-sm font-medium text-gray-400 mt-1">${currency.toUpperCase()}: <span class="text-xl font-bold text-green-400">${formatCurrency(price, currency)}</span></p>`;
+                        }
+
+                        htmlContent += `
+                        <div class="bg-gray-600 p-6 rounded-xl shadow-inner mb-4 last:mb-0">
+                            <h3 class="text-2xl font-semibold mb-2">${cryptoId.toUpperCase()}</h3>
+                            ${priceListHtml}
+                        </div>
+                    `;
+                    }
+
+                    resultContainer.innerHTML = htmlContent;
+                    hideMessage();
+
+                    // Show cached status if applicable
+                    if (cached) {
+                        showMessage("Data fetched from cache.", "info");
+                    } else {
+                        showMessage("Data freshly fetched.", "info");
+                    }
+
+                    // Animate the result container
+                    resultContainer.classList.remove("hidden");
+                    setTimeout(() => {
+                        resultContainer.classList.remove(
+                            "scale-95",
+                            "opacity-0",
+                        );
+                    }, 10);
+                } catch (error) {
+                    console.error("Failed to fetch data:", error);
+                    showMessage(
+                        "An error occurred. Please try again later.",
+                        "error",
+                    );
+                }
+            }
+
+            // Add event listener to the button
+            fetchBtn.addEventListener("click", () => {
+                const cryptoSymbols = cryptoInput.value.trim().toLowerCase();
+                const currencySymbols = currencyInput.value
+                    .trim()
+                    .toLowerCase();
+
+                if (cryptoSymbols && currencySymbols) {
+                    fetchCryptoData(cryptoSymbols, currencySymbols);
+                } else {
+                    console.error(
+                        "User input error: Please enter both cryptocurrency symbols and currencies.",
+                    );
+                    showMessage(
+                        "Please enter both cryptocurrency symbols and currencies.",
+                        "error",
+                    );
+                }
+            });
+
+            // Optional: Allow fetching with the Enter key
+            cryptoInput.addEventListener("keypress", (event) => {
+                if (event.key === "Enter") {
+                    fetchBtn.click();
+                }
+            });
+
+            currencyInput.addEventListener("keypress", (event) => {
+                if (event.key === "Enter") {
+                    fetchBtn.click();
+                }
+            });
+        </script>
+    </body>
+</html>
