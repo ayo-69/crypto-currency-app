@@ -20,10 +20,10 @@ func GetPrice(c *gin.Context) {
 
 	if cached, found := priceCache.Get(cacheKey); found {
 		c.JSON(http.StatusOK, gin.H{
-			"symbol":   symbols,
-			"currency": currencies,
-			"price":    cached,
-			"cached":   true,
+			"symbols":    symbols,
+			"currencies": currencies,
+			"prices":     cached,
+			"cached":     true,
 		})
 		return
 	}
@@ -44,6 +44,8 @@ func GetPrice(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse response"})
 		return
 	}
+
+	priceCache.Set(cacheKey, data, cache.DefaultExpiration)
 
 	c.JSON(http.StatusOK, gin.H{
 		"symbols":    symbols,
