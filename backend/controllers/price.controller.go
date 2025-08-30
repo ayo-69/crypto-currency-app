@@ -16,18 +16,6 @@ func GetPrice(c *gin.Context) {
 	symbols := strings.ReplaceAll(c.DefaultQuery("symbols", "bitcoin,ethereum"), " ", "")
 	currencies := strings.ReplaceAll(c.DefaultQuery("currencies", "usd"), " ", "")
 
-	cacheKey := symbols + "|" + currencies
-
-	if cached, found := priceCache.Get(cacheKey); found {
-		c.JSON(http.StatusOK, gin.H{
-			"symbols":    symbols,
-			"currencies": currencies,
-			"prices":     cached,
-			"cached":     true,
-		})
-		return
-	}
-
 	url := "https://api.coingecko.com/api/v3/simple/price?ids=" +
 		strings.ToLower(symbols) +
 		"&vs_currencies=" + strings.ToLower(currencies)
@@ -44,8 +32,6 @@ func GetPrice(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse response"})
 		return
 	}
-
-	priceCache.Set(cacheKey, data, cache.DefaultExpiration)
 
 	c.JSON(http.StatusOK, gin.H{
 		"symbols":    symbols,
