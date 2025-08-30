@@ -13,8 +13,8 @@ import (
 var priceCache = cache.New(5*time.Minute, 10*time.Minute)
 
 func GetPrice(c *gin.Context) {
-	symbols := c.DefaultQuery("symbols", "bitcoin,ethereum")
-	currencies := c.DefaultQuery("currencies", "usd")
+	symbols := strings.ReplaceAll(c.DefaultQuery("symbols", "bitcoin,ethereum"), " ", "")
+	currencies := strings.ReplaceAll(c.DefaultQuery("currencies", "usd"), " ", "")
 
 	cacheKey := symbols + "|" + currencies
 
